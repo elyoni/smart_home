@@ -63,6 +63,8 @@ class DeviceServer(mqtt.Client):
             self.subscribe('device/#', qos=2)
 
             # ping all devices to see if they are connected
+            ## Every connected device should update there device ticket
+            ## using the topic /device/<device_type>/<device_id>/update
             logger.info('pinging device:')
             self.publish('pings', '', qos=2)
 
@@ -75,19 +77,19 @@ class DeviceServer(mqtt.Client):
             self._connected = False
 
     def on_message(self, client, userdata, msg):
-        topic_prefix, client_type, client_id = msg.topic.split('/')
+        topic_prefix, device_type, device_id = msg.topic.split('/')
 
         if topic_prefix == 'device':
             state = msg.payload
-            logger.info('the client:`{}` has been `{}`, client Type: {}'.format(client_id, state, client_type))
+            logger.info('the device:`{}` has been `{}`, device Type: {}'.format(device_id, state, device_type))
             id = tinydb.Query()
-            res = self._database.search(id.client_id == str(client_id))
+            res = self._database.search(id.device_id == str(device_id))
             if (res):
                 #is exists
-                self._database.update({'state' : str(state)}, id.client_id == str(client_id))
+                self._database.update({'state' : str(state)}, id.device_id == str(device_id))
             else:
-                self._database.insert({'client_id' : str(client_id),
-                    'client_type': str(client_type),
+                self._database.insert({'device_id' : str(device_id),
+                    'device_type': str(device_type),
                     'state': str(state)})
 
             # ... set new state for device with above device_id ...
