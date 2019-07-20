@@ -33,6 +33,19 @@ class Topic(object):
         except IndexError:
             return None
 
+    def is_valid_topic(self):
+        if self.get_prefix() != "device":
+            print("Error Prefix topic doesn't start with 'device'")
+            return False
+        if self.get_action() != "connect" or\
+                self.get_action() != "disconnect" or\
+                self.get_action() != "set" or\
+                self.get_action() != "get" or\
+                self.get_action() != "update":
+            print("Error Unknown action, only valid action are:")
+            print("\t[connect, disconnect, set, get, update]")
+            return False
+
 if __name__ == '__main__':
     a = Topic("/device/lamp/1/set")
     print(a.get_prefix())

@@ -28,8 +28,8 @@ class DeviceServer(mqtt.Client):
     def connect(self):
         logger.info('connecting...')
         if self._user_settings is not None:
+            #TODO In the future the connection will work ONLY with user and password
             self.username_pw_set(self._user_settings['user'], self._user_settings['pass'])
-        #super(DeviceServer, self).connect(self._ip, self.port)
         super().connect(self._ip, self._port)
 
         self.loop_start()
@@ -48,7 +48,6 @@ class DeviceServer(mqtt.Client):
             if not self._connected:
                 return
 
-        #super(DeviceServer, self).disconnect()
         super().disconnect()
 
     # BELOW WE OVERRIDE CALLBACK FUNCTIONS
@@ -60,6 +59,12 @@ class DeviceServer(mqtt.Client):
             # ... set all device states to 'disconnected' ...
 
             # subscribe to all state channels
+            ## Optional topics:
+            ## 1. /device/<device_type>/<device_id>/connect
+            ## 2. /device/<device_type>/<device_id>/disconnect
+            ## 3. /device/<device_type>/<device_id>/set
+            ## 4. /device/<device_type>/<device_id>/get
+            ## 5. /device/<device_type>/<device_id>/update
             self.subscribe('device/#', qos=2)
 
             # ping all devices to see if they are connected
@@ -77,8 +82,15 @@ class DeviceServer(mqtt.Client):
             self._connected = False
 
     def on_message(self, client, userdata, msg):
-        topic_prefix, device_type, device_id = msg.topic.split('/')
+        _topic = Topic(msg.topic)
 
+        if _topic.get_prefix() != "device":
+
+        ## 1. /device/<device_type>/<device_id>/connect
+        ## 2. /device/<device_type>/<device_id>/disconnect
+        ## 3. /device/<device_type>/<device_id>/set
+        ## 4. /device/<device_type>/<device_id>/get
+        ## 5. /device/<device_type>/<device_id>/update
         if topic_prefix == 'device':
             state = msg.payload
             logger.info('the device:`{}` has been `{}`, device Type: {}'.format(device_id, state, device_type))
