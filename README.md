@@ -65,4 +65,7 @@ The device server will save in a database(using TinyDB) all off the data of the 
 * TBD
 
 # How to install
+## Python package
+* pip3 install tinydb   # To created and read the tickets of the devices
+* pip3 install paho-mqtt    # Communication protocol between the devices
 * TBD
