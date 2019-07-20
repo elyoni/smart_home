@@ -26,14 +26,14 @@
 	2. Complex set
 	With Complex set command you have to send a JSON that will describe the set attribute like the start time end time.
 	* JSON Example for RGB lamp:
-	```JSON
-            {
-                "start_time": "1.1.2019 10:12:1",
-                "r": 3,
-                "g": 100,
-                "b": 3
-            }
-			```
+		```JSON
+		    {
+			"start_time": "1.1.2019 10:12:1",
+			"r": 3,
+			"g": 100,
+			"b": 3
+		    }
+		```
         Device reaction: after receiving the set command the device will update his state in the device state.
         * Make sure the device is subscribe the set topic
     get: The get action will pull the data from the device ticket(database) that is found in the server state
@@ -46,20 +46,21 @@
 
 # System Client
 ## Device Server
-The device server will save in a database(using TinyDB) all off the data of the device, every device will have a ticket that store all of the last information about that device
-    General Device Ticket:
+The device server will save in a database(using TinyDB) all off the data of the device, every device will have a ticket that store all of the last information about that device.
+* General Device Ticket:
 	```JSON
-        {
-            "connection": "off/on",
-            "type": analog_lamp, digital_lamp, ... Amp_meter.
-            "device_id": # of the device, unique, number for his type
-            "location": the location if the device
-            "last condition": { "condition": last value that gas been send from the device
-                                "timestamps": save the time that the last message has been sent
-                                "timestamps timeout": after that time the data will not be valid anymore"
-                                }
-        }
-		```
+		{
+		    "connection": "off/on",
+		    "type": analog_lamp, digital_lamp, ... Amp_meter.
+		    "device_id": # of the device, unique, number for his type
+		    "location": the location if the device
+		    "last condition": {
+					"condition": last value that gas been send from the device
+					"timestamps": save the time that the last message has been sent
+					"timestamps timeout": after that time the data will not be valid anymore"
+				}
+		}	
+	```
 ## Client
 * TBD
 
