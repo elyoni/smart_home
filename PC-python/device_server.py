@@ -1,23 +1,27 @@
+"""This file will handle the device server."""
+
 import logging
 import paho.mqtt.client as mqtt
 from threading import Lock
 from time import sleep
-import tinydb # import TinyDB, Query
+import tinydb  # import TinyDB, Query
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(name)s: %(message)s',)
-logger = logging.getLogger('DeviceServer')
-logger.setLevel(logging.INFO)
+LOGGER = logging.getLogger('DeviceServer')
+LOGGER.setLevel(logging.INFO)
+
 
 class DeviceServer(mqtt.Client):
+    """The device server will handle the tickets for every device that is connected to the system."""
 
-    def __init__(self, ip="127.0.0.1", port=1883, user_settings=None):
-        logger.info('initializing...')
-        self._ip = ip
-        self._port = port
+    def __init__(self, server_ip="127.0.0.1", server_port=1883, user_settings=None):
+        LOGGER.info('initializing...')
+        self._ip = server_ip
+        self._port = server_port
         self._user_settings = user_settings
 
-        # ... set all device states to 'unknown' ...
+        # This variable make sure that I am connected to server before continue
         self._connected = False
         # creating a lock for the above var for thread-safe reasons
         self._lock = Lock()
@@ -26,9 +30,10 @@ class DeviceServer(mqtt.Client):
         super().__init__()
 
     def connect(self):
-        logger.info('connecting...')
+        """To connecect to the server run this commnad."""
+        LOGGER.info('connecting...')
         if self._user_settings is not None:
-            #TODO In the future the connection will work ONLY with user and password
+            # TODO In the future the connection will work ONLY with user and password
             self.username_pw_set(self._user_settings['user'], self._user_settings['pass'])
         super().connect(self._ip, self._port)
 
@@ -42,7 +47,8 @@ class DeviceServer(mqtt.Client):
             sleep(1)
 
     def disconnect(self):
-        logger.info('disconnecting...')
+        """When the device server will dissconnect this function will run."""
+        LOGGER.info('disconnecting...')
         with self._lock:
             # if already disconnected, don't do anything
             if not self._connected:
@@ -55,54 +61,57 @@ class DeviceServer(mqtt.Client):
     def on_connect(self, client, userdata, flags, rc):
         # successful connection
         if rc == 0:
-            logger.info('successful connection')
+            LOGGER.info('successful connection')
             # ... set all device states to 'disconnected' ...
 
             # subscribe to all state channels
-            ## Optional topics:
-            ## 1. /device/<device_type>/<device_id>/connect
-            ## 2. /device/<device_type>/<device_id>/disconnect
-            ## 3. /device/<device_type>/<device_id>/set
-            ## 4. /device/<device_type>/<device_id>/get
-            ## 5. /device/<device_type>/<device_id>/update
+            # # Optional topics:
+            # # 1. /device/<device_type>/<device_id>/connect
+            # # 2. /device/<device_type>/<device_id>/disconnect
+            # # 3. /device/<device_type>/<device_id>/set
+            # # 4. /device/<device_type>/<device_id>/get
+            # # 5. /device/<device_type>/<device_id>/update
             self.subscribe('device/#', qos=2)
 
             # ping all devices to see if they are connected
-            ## Every connected device should update there device ticket
-            ## using the topic /device/<device_type>/<device_id>/update
-            logger.info('pinging device:')
+            # # Every connected device should update there device ticket
+            # # using the topic /device/<device_type>/<device_id>/update
+            LOGGER.info('pinging device:')
             self.publish('pings', '', qos=2)
 
             with self._lock:
                 self._connected = True
 
     def on_disconnect(self, client, userdata, rc):
-        logger.info('disconnected')
+        LOGGER.info('disconnected')
         with self._lock:
             self._connected = False
-
+        print("asddasD")
     def on_message(self, client, userdata, msg):
+
         _topic = Topic(msg.topic)
 
         if _topic.get_prefix() != "device":
+            LOGGER.error("Unknown message")
 
-        ## 1. /device/<device_type>/<device_id>/connect
-        ## 2. /device/<device_type>/<device_id>/disconnect
-        ## 3. /device/<device_type>/<device_id>/set
-        ## 4. /device/<device_type>/<device_id>/get
-        ## 5. /device/<device_type>/<device_id>/update
-        if topic_prefix == 'device':
+        # # 1. /device/<device_type>/<device_id>/connect
+        # # 2. /device/<device_type>/<device_id>/disconnect
+        # # 3. /device/<device_type>/<device_id>/set
+        # # 4. /device/<device_type>/<device_id>/get
+        # # 5. /device/<device_type>/<device_id>/update
+        else:
             state = msg.payload
-            logger.info('the device:`{}` has been `{}`, device Type: {}'.format(device_id, state, device_type))
+            LOGGER.info('the device:{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
+                                                                               _topic.get_action(),
+                                                                               _topic.device_type()))
             id = tinydb.Query()
-            res = self._database.search(id.device_id == str(device_id))
-            if (res):
-                #is exists
-                self._database.update({'state' : str(state)}, id.device_id == str(device_id))
+            if (self._database.search(id.device_id == str(_topic.get_device_id()))):
+                # is exists
+                self._database.update({'state': str(state)}, id.device_id == str(_topic.get_device_id()))
             else:
-                self._database.insert({'device_id' : str(device_id),
-                    'device_type': str(device_type),
-                    'state': str(state)})
+                self._database.insert({'device_id': str(_topic.get_device_id()),
+                                       'device_type': str(_topic.get_device_id()),
+                                       'action': str(_topic.get_action())})  # Was state and changed to action
 
             # ... set new state for device with above device_id ...
 
