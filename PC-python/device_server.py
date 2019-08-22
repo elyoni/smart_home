@@ -5,6 +5,7 @@ import paho.mqtt.client as mqtt
 from threading import Lock
 from time import sleep
 import tinydb  # import TinyDB, Query
+from topic import Topic
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(name)s: %(message)s',)

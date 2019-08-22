@@ -19,7 +19,7 @@ class MClient(mqtt.Client):
         self._user_settings = user_settings
         self._client_type = client_type
         #self._keepalive = keepalive
-        self._state_topic = 'states/{1}/{0}'.format(client_id, client_type)
+        self._state_topic = 'device/{1}/{0}'.format(client_id, client_type)
         self._ping_topic = 'pings'
         print("state_topic:", self._state_topic)
         print("ping_topic:", self._ping_topic)
