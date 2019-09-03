@@ -1,0 +1,3 @@
+@startuml
+Device -> Device_Server: Connect: /device/<device_type>/<device_id>/connect
+@enduml

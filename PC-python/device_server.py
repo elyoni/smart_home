@@ -1,16 +1,16 @@
+#!/usr/bin/python3.4
 """This file will handle the device server."""
-
+import os
 import logging
 import paho.mqtt.client as mqtt
 from threading import Lock
 from time import sleep
 import tinydb  # import TinyDB, Query
 from topic import Topic
-
 logging.basicConfig(level=logging.DEBUG,
                     format='%(name)s: %(message)s',)
 LOGGER = logging.getLogger('DeviceServer')
-LOGGER.setLevel(logging.INFO)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class DeviceServer(mqtt.Client):
@@ -72,12 +72,13 @@ class DeviceServer(mqtt.Client):
             # # 3. /device/<device_type>/<device_id>/set
             # # 4. /device/<device_type>/<device_id>/get
             # # 5. /device/<device_type>/<device_id>/update
+            LOGGER.info('subscribe to device/#')
             self.subscribe('device/#', qos=2)
 
             # ping all devices to see if they are connected
             # # Every connected device should update there device ticket
             # # using the topic /device/<device_type>/<device_id>/update
-            LOGGER.info('pinging device:')
+            LOGGER.info('pinging device')
             self.publish('pings', '', qos=2)
 
             with self._lock:
@@ -88,19 +89,27 @@ class DeviceServer(mqtt.Client):
         with self._lock:
             self._connected = False
         print("asddasD")
-    def on_message(self, client, userdata, msg):
 
+    def on_message(self, client, userdata, msg):
         _topic = Topic(msg.topic)
+        print(_topic._topic)
+        #TODO the function _topic.get_action() is having a problem
 
         if _topic.get_prefix() != "device":
-            LOGGER.error("Unknown message")
-
+            LOGGER.error("Unknown topic, the topic is:", _topic._topic)
+        elif _topic.get_device_id() is None or\
+            _topic.get_action() is None or\
+            _topic.device_type() is None:
+            print("TODO nooooo")
         # # 1. /device/<device_type>/<device_id>/connect
         # # 2. /device/<device_type>/<device_id>/disconnect
         # # 3. /device/<device_type>/<device_id>/set
         # # 4. /device/<device_type>/<device_id>/get
         # # 5. /device/<device_type>/<device_id>/update
         else:
+            print(_topic.get_device_id())
+            print(_topic.get_action())
+            print(_topic.device_type())
             state = msg.payload
             LOGGER.info('the device:{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
                                                                                _topic.get_action(),
@@ -117,12 +126,28 @@ class DeviceServer(mqtt.Client):
             # ... set new state for device with above device_id ...
 
 
-if __name__ == '__main__':
 
+
+
+
+def run():
+    print("***************************")
+    print("Running DeviceServer script")
+    print("***************************")
+    creation_time = os.stat(__file__).st_mtime
     state_server = DeviceServer()
     state_server.connect()
 
-    while True:
+    while creation_time == os.stat(__file__).st_mtime:
         # ... replace sleeping below with doing some useful work ...
         # logger.info('sleeping for 1 sec')
-        sleep(10)
+        sleep(0.1)
+
+    try:
+        os.execv(__file__, [''])
+    except FileNotFoundError:
+        print("ERROR: file not found", FILE_PATH)
+
+if __name__ == '__main__':
+    run()
+

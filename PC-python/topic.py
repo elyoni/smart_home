@@ -1,15 +1,20 @@
 from enum import Enum
+
+
 class TopicFields(Enum):
-    PREFIX = 1
-    DEVICE_TYPE = 2
-    DEVICE_ID = 3
-    ACTION = 4
+    PREFIX = 0
+    DEVICE_TYPE = 1
+    DEVICE_ID = 2
+    ACTION = 3
+
 
 class Topic(object):
     def __init__(self, topic):
         super().__init__()
         self._topic = topic.split("/")
+
     def get_prefix(self):
+        """Return first topic."""
         try:
             return self._topic[TopicFields.PREFIX.value]
         except IndexError:
