@@ -1,3 +1,8 @@
 @startuml
 Device -> Device_Server: Connect: /device/<device_type>/<device_id>/connect
+note left
+    The device will send a message
+    with the action 'connect'
+    with a full ticket
+end note
 @enduml
