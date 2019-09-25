@@ -6,7 +6,7 @@ import paho.mqtt.client as mqtt
 from threading import Lock
 from time import sleep
 import tinydb  # import TinyDB, Query
-from topic import Topic
+from topic import TopicParser
 logging.basicConfig(level=logging.DEBUG,
                     format='%(name)s: %(message)s',)
 LOGGER = logging.getLogger('DeviceServer')
@@ -78,7 +78,7 @@ class DeviceServer(mqtt.Client):
             # ping all devices to see if they are connected
             # # Every connected device should update there device ticket
             # # using the topic /device/<device_type>/<device_id>/update
-            LOGGER.info('pinging device')
+            LOGGER.info('publish: pinging device')
             self.publish('pings', '', qos=2)
 
             with self._lock:
@@ -88,46 +88,41 @@ class DeviceServer(mqtt.Client):
         LOGGER.info('disconnected')
         with self._lock:
             self._connected = False
-        print("asddasD")
 
     def on_message(self, client, userdata, msg):
-        _topic = Topic(msg.topic)
-        print(_topic._topic)
+        _topic = TopicParser(msg.topic)
+        print("New messages:", _topic._topic)
         #TODO the function _topic.get_action() is having a problem
-
         if _topic.get_prefix() != "device":
             LOGGER.error("Unknown topic, the topic is:", _topic._topic)
         elif _topic.get_device_id() is None or\
             _topic.get_action() is None or\
-            _topic.device_type() is None:
-            print("TODO nooooo")
-        # # 1. /device/<device_type>/<device_id>/connect
-        # # 2. /device/<device_type>/<device_id>/disconnect
-        # # 3. /device/<device_type>/<device_id>/set
-        # # 4. /device/<device_type>/<device_id>/get
-        # # 5. /device/<device_type>/<device_id>/update
+            _topic.get_device_type() is None:
+            LOGGER.error("not enoth field in the topic", _topic)
+        # # # 1. /device/<device_type>/<device_id>/connect
+        # # # 2. /device/<device_type>/<device_id>/disconnect
+        # # # 3. /device/<device_type>/<device_id>/set
+        # # # 4. /device/<device_type>/<device_id>/get
+        # # # 5. /device/<device_type>/<device_id>/update
         else:
-            print(_topic.get_device_id())
-            print(_topic.get_action())
-            print(_topic.device_type())
             state = msg.payload
+            print(state)
+
             LOGGER.info('the device:{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
                                                                                _topic.get_action(),
-                                                                               _topic.device_type()))
+                                                                               _topic.get_device_type()))
             id = tinydb.Query()
             if (self._database.search(id.device_id == str(_topic.get_device_id()))):
                 # is exists
+                print("Ticket is exists")
                 self._database.update({'state': str(state)}, id.device_id == str(_topic.get_device_id()))
             else:
+                print("Ticket is not exists")
                 self._database.insert({'device_id': str(_topic.get_device_id()),
                                        'device_type': str(_topic.get_device_id()),
                                        'action': str(_topic.get_action())})  # Was state and changed to action
 
             # ... set new state for device with above device_id ...
-
-
-
-
 
 
 def run():
@@ -144,9 +139,10 @@ def run():
         sleep(0.1)
 
     try:
+        # Reopen the file on update
         os.execv(__file__, [''])
     except FileNotFoundError:
-        print("ERROR: file not found", FILE_PATH)
+        print("ERROR: file not found", _file__)
 
 if __name__ == '__main__':
     run()

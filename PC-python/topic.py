@@ -1,4 +1,5 @@
 from enum import Enum
+import traceback
 
 
 class TopicFields(Enum):
@@ -8,7 +9,7 @@ class TopicFields(Enum):
     ACTION = 3
 
 
-class Topic(object):
+class TopicParser(object):
     def __init__(self, topic):
         super().__init__()
         self._topic = topic.split("/")
@@ -18,24 +19,32 @@ class Topic(object):
         try:
             return self._topic[TopicFields.PREFIX.value]
         except IndexError:
+            print("error")
+            traceback.format_exc()
             return None
 
     def get_device_type(self):
         try:
             return self._topic[TopicFields.DEVICE_TYPE.value]
         except IndexError:
+            traceback.format_exc()
+            print("error")
             return None
 
     def get_device_id(self):
         try:
             return self._topic[TopicFields.DEVICE_ID.value]
         except IndexError:
+            print("error")
+            traceback.format_exc()
             return None
 
     def get_action(self):
         try:
             return self._topic[TopicFields.ACTION.value]
         except IndexError:
+            print("error")
+            traceback.format_exc()
             return None
 
     def is_valid_topic(self):
