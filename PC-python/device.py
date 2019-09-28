@@ -100,9 +100,6 @@ class MDevice(mqtt.Client):
 
         super().__init__()
 
-    def get_ticket(self):
-        return json.dumps(self._ticket.__dict__)
-
     def connect(self):
         logger.info('connecting...')
         if self._user_settings is not None:
