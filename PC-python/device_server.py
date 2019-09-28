@@ -12,6 +12,9 @@ logging.basicConfig(level=logging.DEBUG,
 LOGGER = logging.getLogger('DeviceServer')
 LOGGER.setLevel(logging.DEBUG)
 
+class Database(tinydb.TinyDB):
+    def __init__(self, database_file):
+        super().__init__(database_file)
 
 class DeviceServer(mqtt.Client):
     """The device server will handle the tickets for every device that is connected to the system."""
@@ -86,6 +89,7 @@ class DeviceServer(mqtt.Client):
 
     def on_disconnect(self, client, userdata, rc):
         LOGGER.info('disconnected')
+
         with self._lock:
             self._connected = False
 
@@ -105,21 +109,28 @@ class DeviceServer(mqtt.Client):
             # 4. /device/<device_type>/<device_id>/get
             # 5. /device/<device_type>/<device_id>/update
             state = msg.payload
-            print(state)
+            print("****message:", state)
+            LOGGER.info('the device id#{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
+                                                                                  _topic.get_action(),
+                                                                                  _topic.get_device_type()))
+            database_query = tinydb.Query()
+            if self._database.search(database_query.device_id == str(_topic.get_device_id()) &
+                                     database_query.device_type == str(_topic.get_device_type())):
+                # Found Device type and device id in the database
 
-            LOGGER.info('the device:{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
-                                                                               _topic.get_action(),
-                                                                               _topic.get_device_type()))
-            id = tinydb.Query()
-            if (self._database.search(id.device_id == str(_topic.get_device_id()))):
-                # is exists
-                print("Ticket is exists")
-                self._database.update({'state': str(state)}, id.device_id == str(_topic.get_device_id()))
-            else:
-                print("Ticket is not exists")
-                self._database.insert({'device_id': str(_topic.get_device_id()),
-                                       'device_type': str(_topic.get_device_id()),
-                                       'action': str(_topic.get_action())})  # Was state and changed to action
+                self._database.update({'state': str(state)}, database_query.device_id == str(_topic.get_device_id()))
+                # print("Ticket is exists", self._database.search(database_query.device_id == str(_topic.get_device_id())))
+
+
+            # if (self._database.search(database_query.device_id == str(_topic.get_device_id()))):
+                # # is exists
+                # self._database.update({'state': str(state)}, database_query.device_id == str(_topic.get_device_id()))
+                # print("Ticket is exists", self._database.search(database_query.device_id == str(_topic.get_device_id())))
+            # else:
+                # print("Ticket is not exists")
+                # self._database.insert({'device_id': str(_topic.get_device_id()),
+                                       # 'device_type': str(_topic.get_device_id()),
+                                       # 'action': str(_topic.get_action())})  # Was state and changed to action
 
             # ... set new state for device with above device_id ...
 
@@ -142,6 +153,7 @@ def run():
         os.execv(__file__, [''])
     except FileNotFoundError:
         print("ERROR: file not found", _file__)
+
 
 if __name__ == '__main__':
     run()

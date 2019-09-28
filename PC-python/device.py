@@ -1,5 +1,7 @@
+import os
 import logging
 import paho.mqtt.client as mqtt
+import datetime
 from threading import Lock
 from time import sleep
 import sys
@@ -90,6 +92,7 @@ class MDevice(mqtt.Client):
         # self._keepalive = keepalive
         self._state_topic = StateTopic(device_id, device_type)  # 'device/{0}/{1}'.format(device_type, device_id)
         self._ticket = Ticket(device_id, device_type, location)
+        self._ticket.set_new_condition("On")
         self._ping_topic = 'pings'
         print("Basic state_topic:", self._state_topic)
         print("ping_topic:", self._ping_topic)
@@ -140,7 +143,9 @@ class MDevice(mqtt.Client):
             logger.info('successful connection')
 
             # inform the state server that the device is connected
-            self.publish(self._state_topic.connect(), self.get_ticket(), qos=2)
+            print("Device is publish to {}, with the message {}".format(
+                self._state_topic.connect(), self._ticket.get_ticket()))
+            self.publish(self._state_topic.connect(), self._ticket.get_ticket(), qos=2)
             # subscribe to the ping topic so when the server pings the device can respond with a pong
             self.subscribe(self._ping_topic, qos=2)
             with self._lock:
@@ -155,17 +160,32 @@ class MDevice(mqtt.Client):
         # when message is received from the ping topic respond with pong ('connected' state)
         if msg.topic == self._ping_topic:
             logger.info('received ping. responding with state')
-            self.publish(self._state_topic.connect(), self.get_ticket(), qos=2)
+            self.publish(self._state_topic.connect(), self._ticket.get_ticket(), qos=2)
+        else:
+            logger.error('unknown topic')
 
 
-if __name__ == '__main__':
+def run():
+    creation_time = os.stat(__file__).st_mtime
     if (len(sys.argv) > 1):
-        mdevice = MDevice(device_id=sys.argv[1], device_type="lamp")
+        mdevice = MDevice(device_id=sys.argv[1], device_type="lamp", location="Living room")
     else:
         mdevice = MDevice(device_id=0, device_type="lamp", location="Living room")
     mdevice.connect()
-
     while True:
-        # ... replace sleeping below with doing some useful work ...
         logger.info('sleeping for 10 sec')
         sleep(10)
+    #while creation_time == os.stat(__file__).st_mtime:
+    #    # ... replace sleeping below with doing some useful work ...
+    #    # logger.info('sleeping for 10 sec')
+    #    sleep(0.1)
+
+    #    try:
+    #        # Reopen the file on update
+    #        os.execv(__file__, [__file__] + sys.argv)
+    #    except FileNotFoundError:
+    #        print("ERROR: file not found", _file__)
+
+
+if __name__ == '__main__':
+    run()
