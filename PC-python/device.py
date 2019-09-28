@@ -104,7 +104,7 @@ class MDevice(mqtt.Client):
         logger.info('connecting...')
         if self._user_settings is not None:
             self.username_pw_set(self._user_settings['user'], self._user_settings['pass'])
-        self.will_set(self._state_topic.connect(), 'disconnected', qos=2)
+        self.will_set(self._state_topic.disconnect(), 'disconnected', qos=2)
 
         # super(MDevice, self).connect(self._ip, self.port)
         super().connect(self._ip, self._port)
