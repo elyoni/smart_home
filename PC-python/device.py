@@ -12,34 +12,56 @@ logger.setLevel(logging.INFO)
 
 
 class StateTopic:
+    """Build topic for the device."""
+
     def __init__(self, device_id, device_type):
+        """Build the basic topic."""
         self._base_topic = 'device/{0}/{1}'.format(device_type, device_id)
 
     def connect(self):
+        """Build connect topic."""
         return self._base_topic + "/connect"
 
     def disconnect(self):
+        """Build disconnect topic."""
         return self._base_topic + "/disconnect"
 
     def set(self, value):
+        """Build set topic, this topic receive value."""
         return self._base_topic + "/set/" + str(value)
 
-    def get(self, value):
-        return self._base_topic + "/disconnect"
+    # def get(self):
+        # # TODO: need to see if I need that topic
+        # return self._base_topic + "/get"
 
 
 class Ticket:
-    """I am not using underline because I will create a json data
+    """ To get the ticket you need to convert the objet to json using dumps function.
+    * Private variable: I am not using underline because I will create a json data
     from the self variables."""
     def __init__(self, device_id, device_type, location):
-        self.device_type = device_type
-        self.device_id = device_id
-        self.connection_status = None
-        self.location = location
-        self.last_codition = {}
+        self.ticket = {
+            'device_id': str(device_id),
+            'device_type': str(device_type),
+            'connection_status': None,
+            'location': str(location),
+            'last_codition': {
+                'condition': None,
+                'timestamps': None,
+                'timestamps_timeout': None
+            }
+        }
 
     def set_connection(self, connection):
-        self.connection_status = connection
+        self.ticket['connection_status'] = connection
+
+    def set_new_condition(self, condition, timeout=None):
+        self.ticket['last_codition']['condition'] = condition
+        self.ticket['last_codition']['timestamps'] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+        self.ticket['last_codition']['timestamps_timeout'] = None  # TODO need to sum datetime.datetime.now()
+
+    def get_ticket(self):
+        return json.dumps(self.ticket)
 
     """
             ```JSON
@@ -53,12 +75,12 @@ class Ticket:
                             "timestamps": save the time that the last message has been sent
                             "timestamps timeout": after that time the data will not be valid anymore"
                         }
-                }	
+                }
             ```
     """
 
-class MDevice(mqtt.Client):
 
+class MDevice(mqtt.Client):
     def __init__(self, device_id, device_type, location, ip="127.0.0.1", port=1883, user_settings=None):
         logger.info('initializing...')
         self._ip = ip

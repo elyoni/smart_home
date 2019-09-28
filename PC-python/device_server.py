@@ -92,19 +92,18 @@ class DeviceServer(mqtt.Client):
     def on_message(self, client, userdata, msg):
         _topic = TopicParser(msg.topic)
         print("New messages:", _topic._topic)
-        #TODO the function _topic.get_action() is having a problem
         if _topic.get_prefix() != "device":
             LOGGER.error("Unknown topic, the topic is:", _topic._topic)
         elif _topic.get_device_id() is None or\
             _topic.get_action() is None or\
             _topic.get_device_type() is None:
             LOGGER.error("not enoth field in the topic", _topic)
-        # # # 1. /device/<device_type>/<device_id>/connect
-        # # # 2. /device/<device_type>/<device_id>/disconnect
-        # # # 3. /device/<device_type>/<device_id>/set
-        # # # 4. /device/<device_type>/<device_id>/get
-        # # # 5. /device/<device_type>/<device_id>/update
         else:
+            # 1. /device/<device_type>/<device_id>/connect
+            # 2. /device/<device_type>/<device_id>/disconnect
+            # 3. /device/<device_type>/<device_id>/set
+            # 4. /device/<device_type>/<device_id>/get
+            # 5. /device/<device_type>/<device_id>/update
             state = msg.payload
             print(state)
 
