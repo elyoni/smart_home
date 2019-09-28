@@ -1,3 +1,4 @@
+#!/usr/bin/python3.4
 import os
 import logging
 import paho.mqtt.client as mqtt
@@ -94,8 +95,6 @@ class MDevice(mqtt.Client):
         self._ticket = Ticket(device_id, device_type, location)
         self._ticket.set_new_condition("On")
         self._ping_topic = 'pings'
-        print("Basic state_topic:", self._state_topic)
-        print("ping_topic:", self._ping_topic)
 
         self._connected = False
         # creating a lock for the above var for thread-safe reasons
@@ -107,7 +106,7 @@ class MDevice(mqtt.Client):
         logger.info('connecting...')
         if self._user_settings is not None:
             self.username_pw_set(self._user_settings['user'], self._user_settings['pass'])
-        self.will_set(self._state_topic.disconnect(), 'disconnected', qos=2)
+        self.will_set(self._state_topic.connect(), 'disconnected', qos=2)
 
         # super(MDevice, self).connect(self._ip, self.port)
         super().connect(self._ip, self._port)
@@ -166,26 +165,25 @@ class MDevice(mqtt.Client):
 
 
 def run():
+    print("***************************")
+    print("Running Device script")
+    print("***************************")
     creation_time = os.stat(__file__).st_mtime
     if (len(sys.argv) > 1):
         mdevice = MDevice(device_id=sys.argv[1], device_type="lamp", location="Living room")
     else:
         mdevice = MDevice(device_id=0, device_type="lamp", location="Living room")
     mdevice.connect()
-    while True:
-        logger.info('sleeping for 10 sec')
-        sleep(10)
-    #while creation_time == os.stat(__file__).st_mtime:
-    #    # ... replace sleeping below with doing some useful work ...
-    #    # logger.info('sleeping for 10 sec')
-    #    sleep(0.1)
+    while creation_time == os.stat(__file__).st_mtime:
+        # ... replace sleeping below with doing some useful work ...
+        # logger.info('sleeping for 10 sec')
+        sleep(0.1)
 
-    #    try:
-    #        # Reopen the file on update
-    #        os.execv(__file__, [__file__] + sys.argv)
-    #    except FileNotFoundError:
-    #        print("ERROR: file not found", _file__)
-
+    try:
+        # Reopen the file on update
+        os.execv(__file__, [__file__] + sys.argv)
+    except FileNotFoundError:
+        print("ERROR: file not found", _file__)
 
 if __name__ == '__main__':
     run()
