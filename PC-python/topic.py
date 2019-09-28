@@ -17,7 +17,7 @@ class TopicParser(object):
     def get_prefix(self):
         """Return first topic."""
         try:
-            return self._topic[TopicFields.PREFIX.value]
+            return str(self._topic[TopicFields.PREFIX.value])
         except IndexError:
             print("error")
             traceback.format_exc()
@@ -25,7 +25,7 @@ class TopicParser(object):
 
     def get_device_type(self):
         try:
-            return self._topic[TopicFields.DEVICE_TYPE.value]
+            return str(self._topic[TopicFields.DEVICE_TYPE.value])
         except IndexError:
             traceback.format_exc()
             print("error")
@@ -33,7 +33,7 @@ class TopicParser(object):
 
     def get_device_id(self):
         try:
-            return self._topic[TopicFields.DEVICE_ID.value]
+            return str(self._topic[TopicFields.DEVICE_ID.value])
         except IndexError:
             print("error")
             traceback.format_exc()
@@ -41,7 +41,7 @@ class TopicParser(object):
 
     def get_action(self):
         try:
-            return self._topic[TopicFields.ACTION.value]
+            return str(self._topic[TopicFields.ACTION.value])
         except IndexError:
             print("error")
             traceback.format_exc()
@@ -59,6 +59,8 @@ class TopicParser(object):
             print("Error Unknown action, only valid action are:")
             print("\t[connect, disconnect, set, get, update]")
             return False
+        return True
+
 
 if __name__ == '__main__':
     a = Topic("/device/lamp/1/set")

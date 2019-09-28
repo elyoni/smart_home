@@ -14,7 +14,12 @@ LOGGER.setLevel(logging.DEBUG)
 
 class Database(tinydb.TinyDB):
     def __init__(self, database_file):
+        self._query = tinydb.Query()
         super().__init__(database_file)
+
+    def is_device(self, device_id, device_type):
+        return self._database.search(self._query.device_id == str(device_id) &
+                                     self._query.device_type == str(device_type))
 
 class DeviceServer(mqtt.Client):
     """The device server will handle the tickets for every device that is connected to the system."""
@@ -30,7 +35,7 @@ class DeviceServer(mqtt.Client):
         # creating a lock for the above var for thread-safe reasons
         self._lock = Lock()
 
-        self._database = tinydb.TinyDB('/tmp/database.json')
+        self._database = Database('/tmp/database.json')
         super().__init__()
 
     def connect(self):
@@ -105,21 +110,32 @@ class DeviceServer(mqtt.Client):
         else:
             # 1. /device/<device_type>/<device_id>/connect
             # 2. /device/<device_type>/<device_id>/disconnect
-            # 3. /device/<device_type>/<device_id>/set
+            # 3. /device/<device_type>/<device_id>/set - The client send set, #NOTE may be I need to dissable this option
             # 4. /device/<device_type>/<device_id>/get
-            # 5. /device/<device_type>/<device_id>/update
+            # 5. /device/<device_type>/<device_id>/update - The Device send update
             state = msg.payload
             print("****message:", state)
-            LOGGER.info('the device id#{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
-                                                                                  _topic.get_action(),
-                                                                                  _topic.get_device_type()))
+            LOGGER.info('the device id #{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
+                                                                                   _topic.get_action(),
+                                                                                   _topic.get_device_type()))
             database_query = tinydb.Query()
-            if self._database.search(database_query.device_id == str(_topic.get_device_id()) &
-                                     database_query.device_type == str(_topic.get_device_type())):
+            if self._database.is_device(_topic.get_device_id(), _topic.get_device_type()):
                 # Found Device type and device id in the database
+                # $.[connect, disconnect] Change the state if connect or disconnect
+                # $.[set, update] change the condition
+                # $.[get] return information to the user
 
                 self._database.update({'state': str(state)}, database_query.device_id == str(_topic.get_device_id()))
                 # print("Ticket is exists", self._database.search(database_query.device_id == str(_topic.get_device_id())))
+
+            else:
+                # $.[connect, disconnect] Create new ticket
+                self._database.insert({'device_id': str(_topic.get_device_id()),
+                                       'device_type': str(_topic.get_device_id()),
+                                       'action': str(_topic.get_action())})  # Was state and changed to action
+                # $.[set, update] Create new ticket
+                # $.[get] return None or error
+
 
 
             # if (self._database.search(database_query.device_id == str(_topic.get_device_id()))):
@@ -128,9 +144,6 @@ class DeviceServer(mqtt.Client):
                 # print("Ticket is exists", self._database.search(database_query.device_id == str(_topic.get_device_id())))
             # else:
                 # print("Ticket is not exists")
-                # self._database.insert({'device_id': str(_topic.get_device_id()),
-                                       # 'device_type': str(_topic.get_device_id()),
-                                       # 'action': str(_topic.get_action())})  # Was state and changed to action
 
             # ... set new state for device with above device_id ...
 
