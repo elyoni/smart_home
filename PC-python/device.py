@@ -1,5 +1,6 @@
 #!/usr/bin/python3.4
 import os
+from enum import Enum
 import logging
 import paho.mqtt.client as mqtt
 import datetime
@@ -38,17 +39,30 @@ class StateTopic:
         # return self._base_topic + "/get"
 
 
+class ETicketConnectionState(Enum):
+    # Describe the connection of the device, if connected then it react to command
+    CONNECTED = 1
+    DISSCONNECTED = 2
+
+
+class ECondition(Enum):
+    # Describe the state of the device
+    ON = 1
+    OFF = 2
+
+
 class Ticket:
-    """ To get the ticket you need to convert the objet to json using dumps function.
-    * Private variable: I am not using underline because I will create a json data
-    from the self variables."""
+    """To get the ticket you need to convert the object to json using dumps function."""
+
+    """* Private variable: I am not using underline because I will create a json data."""
+    """from the self variables."""
     def __init__(self, device_id, device_type, location):
         self.ticket = {
             'device_id': str(device_id),
             'device_type': str(device_type),
-            'connection_status': None,
+            'connection_status': ETicketConnectionState.CONNECTED,
             'location': str(location),
-            'last_codition': {
+            'last_condition': {
                 'condition': None,
                 'timestamps': None,
                 'timestamps_timeout': None
@@ -59,12 +73,19 @@ class Ticket:
         self.ticket['connection_status'] = connection
 
     def set_new_condition(self, condition, timeout=None):
-        self.ticket['last_codition']['condition'] = condition
-        self.ticket['last_codition']['timestamps'] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-        self.ticket['last_codition']['timestamps_timeout'] = None  # TODO need to sum datetime.datetime.now()
+        self.ticket['last_condition']['condition'] = condition.name
+        self.ticket['last_condition']['timestamps'] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+        self.ticket['last_condition']['timestamps_timeout'] = None  # TODO need to sum datetime.datetime.now()
 
     def get_ticket(self):
         return json.dumps(self.ticket)
+
+    def get_will_ticket(self):
+        ticket = self.ticket
+        ticket['connection_status'] = ETicketConnectionState.DISSCONNECTED
+        self.ticket['last_condition']['condition'] = ECondition.OFF.name
+        self.ticket['last_condition']['timestamps'] = None
+        self.ticket['last_condition']['timestamps_timeout'] = None
 
     """
             ```JSON
@@ -93,7 +114,7 @@ class MDevice(mqtt.Client):
         # self._keepalive = keepalive
         self._state_topic = StateTopic(device_id, device_type)  # 'device/{0}/{1}'.format(device_type, device_id)
         self._ticket = Ticket(device_id, device_type, location)
-        self._ticket.set_new_condition("On")
+        self._ticket.set_new_condition(ECondition.ON)
         self._ping_topic = 'pings'
 
         self._connected = False
@@ -106,7 +127,8 @@ class MDevice(mqtt.Client):
         logger.info('connecting...')
         if self._user_settings is not None:
             self.username_pw_set(self._user_settings['user'], self._user_settings['pass'])
-        self.will_set(self._state_topic.connect(), 'disconnected', qos=2)
+        # self.will_set(self._state_topic.connect(), 'disconnected', qos=2)
+        self.will_set(self._state_topic.connect(), self._ticket.get_will_ticket(), qos=2)
 
         # super(MDevice, self).connect(self._ip, self.port)
         super().connect(self._ip, self._port)

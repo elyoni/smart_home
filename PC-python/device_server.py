@@ -1,6 +1,7 @@
 #!/usr/bin/python3.4
 """This file will handle the device server."""
 import os
+import traceback
 import logging
 import paho.mqtt.client as mqtt
 from threading import Lock
@@ -12,14 +13,33 @@ logging.basicConfig(level=logging.DEBUG,
 LOGGER = logging.getLogger('DeviceServer')
 LOGGER.setLevel(logging.DEBUG)
 
-class Database(tinydb.TinyDB):
+class Database():
     def __init__(self, database_file):
+        self._database = tinydb.TinyDB(database_file)
         self._query = tinydb.Query()
-        super().__init__(database_file)
 
     def is_device(self, device_id, device_type):
-        return self._database.search(self._query.device_id == str(device_id) &
-                                     self._query.device_type == str(device_type))
+        return self._database.search((self._query.device_id == str(device_id)) &
+                                     (self._query.device_type == str(device_type)))
+    
+    def update(self, ticket, device_id, device_type):
+            if self.is_device(device_id, device_type):
+                # Found Device type and device id in the database
+                # $.[connect, disconnect] Change the ticket if connect or disconnect
+                # $.[set, update] change the condition
+                # $.[get] return information to the user
+                print("old device")
+
+                self._database.update({'ticket': str(ticket)}, self._query.device_id == str(device_id))
+                LOGGER.debug("Ticket is exists {}".
+                             format(self._database.search(self._query.device_id == str(device_id))))
+
+            else:
+                # $.[connect, disconnect] Create new ticket
+                print("new device")
+                self._database.insert({'device_id': str(device_id),
+                                       'device_type': str(device_type)
+                                       })
 
 class DeviceServer(mqtt.Client):
     """The device server will handle the tickets for every device that is connected to the system."""
@@ -99,54 +119,30 @@ class DeviceServer(mqtt.Client):
             self._connected = False
 
     def on_message(self, client, userdata, msg):
-        _topic = TopicParser(msg.topic)
-        print("New messages:", _topic._topic)
-        if _topic.get_prefix() != "device":
-            LOGGER.error("Unknown topic, the topic is:", _topic._topic)
-        elif _topic.get_device_id() is None or\
-            _topic.get_action() is None or\
-            _topic.get_device_type() is None:
-            LOGGER.error("not enoth field in the topic", _topic)
-        else:
-            # 1. /device/<device_type>/<device_id>/connect
-            # 2. /device/<device_type>/<device_id>/disconnect
-            # 3. /device/<device_type>/<device_id>/set - The client send set, #NOTE may be I need to dissable this option
-            # 4. /device/<device_type>/<device_id>/get
-            # 5. /device/<device_type>/<device_id>/update - The Device send update
-            state = msg.payload
-            print("****message:", state)
-            LOGGER.info('the device id #{}` has been `{}`, device Type: {}'.format(_topic.get_device_id(),
-                                                                                   _topic.get_action(),
-                                                                                   _topic.get_device_type()))
-            database_query = tinydb.Query()
-            if self._database.is_device(_topic.get_device_id(), _topic.get_device_type()):
-                # Found Device type and device id in the database
-                # $.[connect, disconnect] Change the state if connect or disconnect
-                # $.[set, update] change the condition
-                # $.[get] return information to the user
-
-                self._database.update({'state': str(state)}, database_query.device_id == str(_topic.get_device_id()))
-                # print("Ticket is exists", self._database.search(database_query.device_id == str(_topic.get_device_id())))
-
+        try:
+            _topic = TopicParser(msg.topic)
+            print("New messages:", _topic._topic)
+            if _topic.get_prefix() != "device":
+                LOGGER.error("Unknown topic, the topic is:", _topic._topic)
+            elif _topic.get_device_id() is None or\
+                _topic.get_action() is None or\
+                    _topic.get_device_type() is None:
+                LOGGER.error("not enoth field in the topic", _topic)
             else:
-                # $.[connect, disconnect] Create new ticket
-                self._database.insert({'device_id': str(_topic.get_device_id()),
-                                       'device_type': str(_topic.get_device_id()),
-                                       'action': str(_topic.get_action())})  # Was state and changed to action
-                # $.[set, update] Create new ticket
-                # $.[get] return None or error
-
-
-
-            # if (self._database.search(database_query.device_id == str(_topic.get_device_id()))):
-                # # is exists
-                # self._database.update({'state': str(state)}, database_query.device_id == str(_topic.get_device_id()))
-                # print("Ticket is exists", self._database.search(database_query.device_id == str(_topic.get_device_id())))
-            # else:
-                # print("Ticket is not exists")
-
-            # ... set new state for device with above device_id ...
-
+                # The topic is good
+                # # 1. /device/<device_type>/<device_id>/connect
+                # # 2. /device/<device_type>/<device_id>/disconnect
+                # # 3. /device/<device_type>/<device_id>/set - The client send set, #NOTE may be I need to dissable this option
+                # # 4. /device/<device_type>/<device_id>/get
+                # # 5. /device/<device_type>/<device_id>/update - The Device send update
+                # print("****message:", ticket)
+                LOGGER.info('the device id #{}` has been `{}`, device Type: {}'.
+                            format(_topic.get_device_id(), _topic.get_action(),
+                                   _topic.get_device_type()))
+                self._database.update(msg.payload, _topic.get_device_id(), _topic.get_device_type())
+                LOGGER.debug("Done with update the database")
+        except Exception as e:
+            traceback.print_exc()
 
 def run():
     print("***************************")
