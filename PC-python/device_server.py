@@ -21,7 +21,7 @@ class Database():
     def is_device(self, device_id, device_type):
         return self._database.search((self._query.device_id == str(device_id)) &
                                      (self._query.device_type == str(device_type)))
-    
+
     def update(self, ticket, device_id, device_type):
             if self.is_device(device_id, device_type):
                 # Found Device type and device id in the database
@@ -121,7 +121,8 @@ class DeviceServer(mqtt.Client):
     def on_message(self, client, userdata, msg):
         try:
             _topic = TopicParser(msg.topic)
-            print("New messages:", _topic._topic)
+            LOGGER.debug("New messages: {}".format(_topic._topic))
+            LOGGER.debug("message:{}".format(msg.payload))
             if _topic.get_prefix() != "device":
                 LOGGER.error("Unknown topic, the topic is:", _topic._topic)
             elif _topic.get_device_id() is None or\

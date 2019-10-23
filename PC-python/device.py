@@ -60,7 +60,7 @@ class Ticket:
         self.ticket = {
             'device_id': str(device_id),
             'device_type': str(device_type),
-            'connection_status': ETicketConnectionState.CONNECTED,
+            'connection_status': ETicketConnectionState.CONNECTED.name,
             'location': str(location),
             'last_condition': {
                 'condition': None,
@@ -81,11 +81,12 @@ class Ticket:
         return json.dumps(self.ticket)
 
     def get_will_ticket(self):
-        ticket = self.ticket
-        ticket['connection_status'] = ETicketConnectionState.DISSCONNECTED
-        self.ticket['last_condition']['condition'] = ECondition.OFF.name
-        self.ticket['last_condition']['timestamps'] = None
-        self.ticket['last_condition']['timestamps_timeout'] = None
+        ticket = self.ticket.copy()
+        ticket['connection_status'] = ETicketConnectionState.DISSCONNECTED.name
+        ticket['last_condition']['condition'] = ECondition.OFF.name
+        ticket['last_condition']['timestamps'] = None
+        ticket['last_condition']['timestamps_timeout'] = None
+        return json.dumps(ticket)
 
     """
             ```JSON
@@ -127,7 +128,6 @@ class MDevice(mqtt.Client):
         logger.info('connecting...')
         if self._user_settings is not None:
             self.username_pw_set(self._user_settings['user'], self._user_settings['pass'])
-        # self.will_set(self._state_topic.connect(), 'disconnected', qos=2)
         self.will_set(self._state_topic.connect(), self._ticket.get_will_ticket(), qos=2)
 
         # super(MDevice, self).connect(self._ip, self.port)
@@ -167,6 +167,7 @@ class MDevice(mqtt.Client):
             print("Device is publish to {}, with the message {}".format(
                 self._state_topic.connect(), self._ticket.get_ticket()))
             self.publish(self._state_topic.connect(), self._ticket.get_ticket(), qos=2)
+            print("123")
             # subscribe to the ping topic so when the server pings the device can respond with a pong
             self.subscribe(self._ping_topic, qos=2)
             with self._lock:
